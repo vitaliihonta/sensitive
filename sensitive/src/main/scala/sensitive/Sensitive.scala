@@ -1,6 +1,9 @@
 package sensitive
 
-trait Sensitive[A] { self =>
+import scala.annotation.implicitNotFound
+
+@implicitNotFound("${A} is not sensitive")
+trait Sensitive[A] {
   def masked(value: A): Masked[A]
 }
 

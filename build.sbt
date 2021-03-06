@@ -19,37 +19,31 @@ lazy val root = project
   .settings(baseSettings)
   .settings(publishArtifact := false)
   .aggregate(
-    `sensitive-core`.projectRefs ++
-      `sensitive-circe`.projectRefs ++
+    sensitive.projectRefs ++
       examples.projectRefs: _*
   )
 
 lazy val examples =
   projectMatrix
     .in(file("examples"))
-    .dependsOn(`sensitive-core`, `sensitive-circe`)
+    .dependsOn(sensitive)
     .settings(baseSettings)
     .settings(libraryDependencies ++= {
-      Seq(Circe.generic)
+      Seq(Circe.generic, Logstage.core, Logstage.renderingCirce, Phobos.core)
     })
     .jvmPlatform(scalaVersions = List(scala212, scala213))
 
-lazy val `sensitive-core` =
+lazy val sensitive =
   projectMatrix
-    .in(file("sensitive-core"))
+    .in(file("sensitive"))
     .settings(baseSettings)
     .settings(
       libraryDependencies ++= Seq(
         "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
+        Circe.core       % Optional,
+        Logstage.core    % Optional,
+        Phobos.core      % Optional,
         Testing.scalatest
       )
     )
-    .jvmPlatform(scalaVersions = List(scala212, scala213))
-
-lazy val `sensitive-circe` =
-  projectMatrix
-    .in(file("sensitive-circe"))
-    .dependsOn(`sensitive-core`)
-    .settings(baseSettings)
-    .settings(libraryDependencies ++= Seq(Circe.core, Testing.scalatest))
     .jvmPlatform(scalaVersions = List(scala212, scala213))

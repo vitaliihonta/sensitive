@@ -12,5 +12,8 @@ class SensitiveBuilder[A](private val transform: A => A) {
   def withFieldMasked[B](f: A => B)(masking: ParameterMasking[B]): SensitiveBuilder[A] =
     macro impl.MaskingMacros.maskImpl[A, B]
 
+  def withFieldSensitive[B](f: A => B): SensitiveBuilder[A] =
+    macro impl.MaskingMacros.sensitiveFieldImpl[A, B]
+
   def build: Sensitive[A] = (value: A) => Masked(transform(value))
 }
