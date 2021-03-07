@@ -1,7 +1,7 @@
 import Dependencies._
 
 val scala213 = "2.13.5"
-val scala212 = "2.12.12"
+val scala212 = "2.12.13"
 
 ThisBuild / organization := "com.github.vitaliihonta"
 ThisBuild / scalaVersion := scala213
@@ -10,7 +10,8 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 val baseSettings = Seq(
   scalacOptions ++= Seq(
     "-language:implicitConversions",
-    "-language:higherKinds"
+    "-language:higherKinds",
+    "-Xsource:2.13"
   )
 )
 
@@ -29,7 +30,12 @@ lazy val examples =
     .dependsOn(sensitive)
     .settings(baseSettings)
     .settings(libraryDependencies ++= {
-      Seq(Circe.generic, Logstage.core, Logstage.renderingCirce, Phobos.core)
+      Seq(
+        Circe.generic,
+        Logstage.core,
+        Logstage.renderingCirce,
+        Phobos.core
+      )
     })
     .jvmPlatform(scalaVersions = List(scala212, scala213))
 

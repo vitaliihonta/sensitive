@@ -30,12 +30,12 @@ object ExamplesLogging extends App {
   }
 
   locally {
-    import sensitive.Logstage._
+    import sensitive.logstage._
     logger.info(s"Plain logging masked $person")
   }
 
   locally {
-    import sensitive.Circe._
+    import sensitive.circe._
     implicit val personLogstageCodec: LogstageCodec[Person] = LogstageCirceCodec.derived[Person]
     jsonLogger.info(s"Json logging masked $person")
 

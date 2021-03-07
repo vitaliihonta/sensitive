@@ -1,6 +1,21 @@
 package com.example
 
+import ru.tinkoff.phobos.derivation.semiauto.deriveElementEncoder
+import ru.tinkoff.phobos.derivation.semiauto.deriveXmlEncoder
+import ru.tinkoff.phobos.encoding.ElementEncoder
 import ru.tinkoff.phobos.encoding.XmlEncoder
+import sensitive.phobos.SensitiveXmlEncoder
+
+object PhobosCodecs {
+  private implicit val cardDataElementEncoder: ElementEncoder[CardData] = deriveElementEncoder[CardData]
+  implicit val personXmlEncoder: XmlEncoder[Person]                     = deriveXmlEncoder[Person]("person")
+}
+
+object PhobosSensitiveCodecs {
+  import PhobosCodecs._
+
+  implicit val theSensitiveXmlEncoder = sensitive.phobos.sensitiveXmlEncoder[Person]
+}
 
 object ExamplesPhobos extends App {
 
@@ -15,10 +30,18 @@ object ExamplesPhobos extends App {
     )
   )
 
+  import PhobosCodecs._
   println(XmlEncoder[Person].encode(person))
 
-  import sensitive.Phobos._
+//  NOTE: this won't work because of ambigous implicits.
+//  Try to uncomment to see the compiler error message
+//  import sensitive.phobos._
+//  println(XmlEncoder[Person].encode(person))
 
+//  NOTE: a workaround is to explicitly define a concrete implicit in the lexical scope.
+//  It will have precedence over the default one.
+//  Uncomment to see that it works
+  import PhobosSensitiveCodecs._
   println(XmlEncoder[Person].encode(person))
 
 }

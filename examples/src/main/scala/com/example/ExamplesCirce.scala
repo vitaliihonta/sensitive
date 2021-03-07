@@ -18,7 +18,7 @@ object ExamplesCirce extends App {
   println("Json vs masked json")
   println(person.asJson.noSpaces)
 
-  import sensitive.Circe._
+  import sensitive.circe._
 
   println(person.asJson.noSpaces)
 }
