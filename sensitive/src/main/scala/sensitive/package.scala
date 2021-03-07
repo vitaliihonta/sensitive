@@ -17,6 +17,10 @@ package object sensitive {
   def substitute[A](by: A): ParameterMasking[A] =
     ParameterMasking.substitute(by)
 
-  def regexp(pattern: Regex, replacement: String): ParameterMasking[String] =
+  def regexp(pattern: Regex, replacement: RegexReplacement): ParameterMasking[String] =
     ParameterMasking.regexp(pattern, replacement)
+
+  def replaceAll(by: String): RegexReplacement = new RegexReplacement.All(by)
+
+  def replaceAll(replacer: Regex.Match => String): RegexReplacement = new RegexReplacement.AllFunc(replacer)
 }

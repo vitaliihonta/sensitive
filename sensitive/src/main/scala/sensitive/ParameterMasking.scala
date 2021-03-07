@@ -11,6 +11,6 @@ object ParameterMasking {
 
   def substitute[A](by: A): ParameterMasking[A] = (_: A) => Masked(by)
 
-  def regexp(pattern: Regex, replacement: String): ParameterMasking[String] =
-    (value: String) => Masked(pattern.replaceAllIn(value, replacement))
+  def regexp(pattern: Regex, replacement: RegexReplacement): ParameterMasking[String] =
+    (value: String) => Masked(replacement.replace(pattern, value))
 }
