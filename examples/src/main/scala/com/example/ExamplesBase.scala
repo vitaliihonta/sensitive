@@ -18,4 +18,10 @@ object ExamplesBase extends App {
   println("Plain vs masked")
   println(person)
   println(person.masked)
+
+  println("As masked string")
+  println(person.asMaskedString)
+
+  println("Card data has toString masked")
+  println(person.card)
 }

@@ -21,5 +21,15 @@ abstract class MacroUtils(val c: blackbox.Context) {
         error(errorMessage)
     }
 
+  def freshTermName(name: String): TermName = c.freshName(TermName(name))
+
   def error(message: String): Nothing = c.abort(c.enclosingPosition, message)
+
+  protected implicit class Debugged[A](self: A) {
+
+    def debugged(msg: String): A = {
+      println(s"$msg: $self")
+      self
+    }
+  }
 }

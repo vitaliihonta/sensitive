@@ -1,13 +1,16 @@
 package sensitive
 
+import scala.annotation.compileTimeOnly
 import scala.language.experimental.macros
 
-class SensitiveBuilder[A](private val transform: A => A) {
-  def this(base: SensitiveBuilder[A], transform: A => A) =
-    this(base.transform andThen transform)
+case class SensitiveBuilderTransformation[A](transformField: A => A, maskField: A => String)
 
-  def withTransformation(f: A => A): SensitiveBuilder[A] =
-    new SensitiveBuilder[A](transform andThen f)
+//@compileTimeOnly("Should be only compile time")
+case class SensitiveBuilder[A <: Product](@internalApi transformations: Map[String, SensitiveBuilderTransformation[Any]]) {
+
+//  @internalApi
+//  def this(base: SensitiveBuilder[A], transform: A => A, maskedName: (String, Any => String)) =
+//    this(base.transform andThen transform, base.maskedNames + maskedName)
 
   def withFieldMasked[B](f: A => B)(masking: ParameterMasking[B]): SensitiveBuilder[A] =
     macro impl.MaskingMacros.maskImpl[A, B]
@@ -15,5 +18,28 @@ class SensitiveBuilder[A](private val transform: A => A) {
   def withFieldSensitive[B](f: A => B): SensitiveBuilder[A] =
     macro impl.MaskingMacros.sensitiveFieldImpl[A, B]
 
-  def build: Sensitive[A] = (value: A) => Masked(transform(value))
+  def build: Sensitive[A] =
+    macro impl.MaskingMacros.buildImpl[A]
+}
+
+@internalApi
+class ProductSensitive[A <: Product](transform: A => A, maskedStrings: Map[Int, Any => String]) extends Sensitive[A] {
+
+  override def masked(value: A): Masked[A] = Masked(transform(value))
+
+  override def asMaskedString(value: A): AsMaskedString[A] = {
+    val sc = new StringBuilder
+    sc.append(value.productPrefix)
+    sc.append('(')
+    value.productIterator.zipWithIndex.foreach {
+      case (value, idx) =>
+        val shown = maskedStrings.get(idx).fold(ifEmpty = value.toString)(_.apply(value))
+        if (idx != 0) {
+          sc.append(',')
+        }
+        sc.append(shown)
+    }
+    sc.append(')')
+    AsMaskedString[A](sc.toString)
+  }
 }
