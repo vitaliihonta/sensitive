@@ -5,10 +5,7 @@ import sensitive.ParameterMasking
 import sensitive.ProductSensitive
 import sensitive.Sensitive
 import sensitive.SensitiveBuilder
-import sensitive.SensitiveBuilderTransformation
-
 import scala.reflect.macros.blackbox
-import org.scalamacros.resetallattrs._
 
 class MaskingMacros(override val c: blackbox.Context) extends MacroUtils(c) {
 

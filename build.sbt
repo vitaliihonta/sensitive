@@ -46,7 +46,6 @@ lazy val sensitive =
     .settings(
       libraryDependencies ++= Seq(
         "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
-        "org.scalamacros" %% "resetallattrs" % "1.0.0",
         Circe.core       % Optional,
         Logstage.core    % Optional,
         Phobos.core      % Optional,
