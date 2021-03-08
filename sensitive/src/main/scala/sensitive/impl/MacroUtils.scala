@@ -25,10 +25,18 @@ abstract class MacroUtils(val c: blackbox.Context) {
 
   def error(message: String): Nothing = c.abort(c.enclosingPosition, message)
 
-  protected implicit class Debugged[A](self: A) {
+  private def debugEnabled: Boolean =
+    sys.props
+      .get("sensitive.debug.macro")
+      .flatMap(str => scala.util.Try(str.toBoolean).toOption)
+      .getOrElse(false)
+
+  implicit class Debugged[A](self: A) {
 
     def debugged(msg: String): A = {
-      println(s"$msg: $self")
+      if (debugEnabled) {
+        println(s"$msg: $self")
+      }
       self
     }
   }

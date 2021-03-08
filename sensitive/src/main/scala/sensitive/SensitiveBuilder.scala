@@ -1,16 +1,34 @@
 package sensitive
 
-import scala.annotation.compileTimeOnly
 import scala.language.experimental.macros
 
-case class SensitiveBuilderTransformation[A](transformField: A => A, maskField: A => String)
+@internalApi
+sealed trait SensitiveBuilderTransformation[A] {
+  def transformField(value: A): A
+  def maskField(value:      A): String
 
-//@compileTimeOnly("Should be only compile time")
-case class SensitiveBuilder[A <: Product](@internalApi transformations: Map[String, SensitiveBuilderTransformation[Any]]) {
+  final def asAny: SensitiveBuilderTransformation[Any] = this.asInstanceOf[SensitiveBuilderTransformation[Any]]
+}
 
-//  @internalApi
-//  def this(base: SensitiveBuilder[A], transform: A => A, maskedName: (String, Any => String)) =
-//    this(base.transform andThen transform, base.maskedNames + maskedName)
+@internalApi
+object SensitiveBuilderTransformation {
+
+  final case class MaskTransform[A](underlying: ParameterMasking[A]) extends SensitiveBuilderTransformation[A] {
+    override def transformField(value: A): A = underlying.apply(value)
+
+    override def maskField(value: A): String = transformField(value).toString
+  }
+
+  final case class SensitiveTransform[A](underlying: Sensitive[A]) extends SensitiveBuilderTransformation[A] {
+    override def transformField(value: A): A = underlying.masked(value)
+
+    override def maskField(value: A): String = underlying.asMaskedString(value)
+  }
+}
+
+class SensitiveBuilder[A](
+  @internalApi val valNames:        Set[String],
+  @internalApi val transformations: Map[String, BaseSensitive[Any]]) {
 
   def withFieldMasked[B](f: A => B)(masking: ParameterMasking[B]): SensitiveBuilder[A] =
     macro impl.MaskingMacros.maskImpl[A, B]
@@ -23,23 +41,4 @@ case class SensitiveBuilder[A <: Product](@internalApi transformations: Map[Stri
 }
 
 @internalApi
-class ProductSensitive[A <: Product](transform: A => A, maskedStrings: Map[Int, Any => String]) extends Sensitive[A] {
-
-  override def masked(value: A): Masked[A] = Masked(transform(value))
-
-  override def asMaskedString(value: A): AsMaskedString[A] = {
-    val sc = new StringBuilder
-    sc.append(value.productPrefix)
-    sc.append('(')
-    value.productIterator.zipWithIndex.foreach {
-      case (value, idx) =>
-        val shown = maskedStrings.get(idx).fold(ifEmpty = value.toString)(_.apply(value))
-        if (idx != 0) {
-          sc.append(',')
-        }
-        sc.append(shown)
-    }
-    sc.append(')')
-    AsMaskedString[A](sc.toString)
-  }
-}
+abstract class ProductSensitive[A] extends Sensitive[A]

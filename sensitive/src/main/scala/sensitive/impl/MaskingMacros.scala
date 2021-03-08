@@ -1,5 +1,6 @@
 package sensitive.impl
 
+import sensitive.BaseSensitive
 import sensitive.ParameterMasking
 import sensitive.ProductSensitive
 import sensitive.Sensitive
@@ -7,12 +8,13 @@ import sensitive.SensitiveBuilder
 import sensitive.SensitiveBuilderTransformation
 
 import scala.reflect.macros.blackbox
+import org.scalamacros.resetallattrs._
 
 class MaskingMacros(override val c: blackbox.Context) extends MacroUtils(c) {
 
   import c.universe._
 
-  private def libraryUsageValidityCheck[A <: Product: WeakTypeTag](): Unit = {
+  private def libraryUsageValidityCheck[A: WeakTypeTag](): Unit = {
     if (!(c.prefix.tree.tpe =:= weakTypeOf[SensitiveBuilder[A]])) {
       error("Invalid library usage! Refer to documentation")
     }
@@ -24,128 +26,123 @@ class MaskingMacros(override val c: blackbox.Context) extends MacroUtils(c) {
     }
   }
 
-  def buildImpl[A <: Product: WeakTypeTag]: Tree = {
+  def buildImpl[A: WeakTypeTag]: Tree = {
     val A                = weakTypeOf[A].dealias
     val ProductSensitive = weakTypeOf[ProductSensitive[A]].dealias
 
     libraryUsageValidityCheck[A]()
 
-    locally {
+    val caseAccessorsWithNames = A.decls.collect {
+      case m: MethodSymbol if m.isCaseAccessor =>
+        val field = m.asMethod
+        field -> freshTermName(s"transform_${field.name}")
+    }.toList
 
-      val caseAccessors = A.decls.collect {
-        case m: MethodSymbol if m.isCaseAccessor => m.asMethod
-      }.toList
+    val (transformationsValNames, transformationsTree) = getTransformationsWithValNames[A]
 
-      val transformationsTree = getTransformations[A](c.prefix.tree)
+    val value           = freshTermName("value")
+    val transformations = freshTermName("transformations")
+    val sc              = freshTermName("sc")
 
-      val nameTransforms = caseAccessors.map(_.name.toString).zipWithIndex.toMap
-
-      val name                = freshTermName("name")
-      val value               = freshTermName("value")
-      val transformationsName = freshTermName("transformations")
-      val transformation      = freshTermName("transformation")
-      val nameIndices         = freshTermName("nameIndices")
-      val idx                 = freshTermName("idx")
-
-      val transform = {
-        val transformations = caseAccessors.map { field =>
+    val transform = {
+      val copies = caseAccessorsWithNames.flatMap {
+        case (field, valName) =>
           val name = field.name.toString
-          val tpe = field.returnType.dealias
-          q"$field = $transformationsName.get($name).fold($value.$field)(_.transformField($value.$field).asInstanceOf[$tpe])"
-        }
-        q""" ($value: $A) => $value.copy(..$transformations) """
+          val tpe  = field.returnType.dealias
+          if (transformationsValNames contains name)
+            Some(q"$field = $transformations($name).maskBase($value.$field).asInstanceOf[$tpe]")
+          else None
       }
-
-      val maskedNames =
-        q"""
-          val $nameIndices = $nameTransforms
-          $transformationsName.map {
-            case ($name, $transformation) =>
-              val $idx = $nameIndices($name)
-              $idx -> $transformation.maskField
-          }
-          """
-
-      q"""
-         val $transformationsName = $transformationsTree
-         new $ProductSensitive($transform, $maskedNames)
-      """ debugged "build"
+      q""" $value.copy(..$copies) """
     }
+
+    val maskString = {
+      val maskTransformations = caseAccessorsWithNames.zipWithIndex.map {
+        case ((field, valName), idx) =>
+          val name = field.name.toString
+          val shown =
+            if (transformationsValNames contains name) q"$transformations($name).maskedStringBase($value.$field)"
+            else q"$value.$field.toString"
+
+          val base = q"$sc.append($shown)"
+          if (idx == 0) base else q"""$sc.append(','); $base"""
+      }
+      q"""
+          val $sc = new StringBuilder
+          $sc.append(${A.typeSymbol.name.toString})
+          $sc.append('(')
+          ..$maskTransformations
+          $sc.append(')')
+          $sc.toString
+          """
+    }
+
+    q"""
+         new $ProductSensitive {
+           private val $transformations = $transformationsTree
+           override def masked($value: $A): _root_.sensitive.Masked[$A] = 
+             _root_.sensitive.Masked($transform)
+
+           override def asMaskedString($value: $A): _root_.sensitive.AsMaskedString[$A] =
+            _root_.sensitive.AsMaskedString($maskString)
+         }
+      """ debugged "[DEBUG] [sensitive] Generated instance"
   }
 
-  def sensitiveFieldImpl[A <: Product: WeakTypeTag, B: WeakTypeTag](f: Expr[A => B]): Tree = {
-    val SensitiveBuilder               = weakTypeOf[SensitiveBuilder[A]].dealias
-    val SensitiveBuilderTransformation = weakTypeOf[SensitiveBuilderTransformation[B]].dealias
-    val A                              = weakTypeOf[A].dealias
-    val B                              = weakTypeOf[B].dealias
+  def sensitiveFieldImpl[A: WeakTypeTag, B: WeakTypeTag](f: Expr[A => B]): Tree = {
+    val SensitiveBuilder = weakTypeOf[SensitiveBuilder[A]].dealias
+    val B                = weakTypeOf[B].dealias
 
     libraryUsageValidityCheck[A]()
 
-    val transformations = getTransformations[A](c.prefix.tree)
-
-    val copyValue = freshTermName("copyValue")
-    val maskValue = freshTermName("maskValue")
+    val (valNames, transformations) = getTransformationsTree[A]
 
     val (fieldName, transform) = extractSelectorField(f.tree)
       .map { field =>
         val sensitive = findImplicit(weakTypeOf[Sensitive[B]], s"value $field of type $B is not sensitive")
-        val transform =
-          q"""
-            SensitiveBuilderTransformation(
-              transformField = ($copyValue: $B) => $sensitive.masked($copyValue),
-              maskField = ($maskValue: $B) => $sensitive.asMaskedString($maskValue)
-            ).asInstanceOf[SensitiveBuilderTransformation[Any]]"""
 
-        field.toString -> transform
+        field.toString -> sensitive
       }
       .getOrElse(
         error(s"Expected a field selector to be passed (as instance.field1), got $f")
       )
 
-    q"""new $SensitiveBuilder($transformations + ($fieldName -> $transform))""" //debugged "withFieldSensitive"
+    q"""new $SensitiveBuilder($valNames + $fieldName, $transformations + ($fieldName -> $transform.asAny))"""
   }
 
-  def maskImpl[A <: Product: WeakTypeTag, B: WeakTypeTag](f: Expr[A => B])(masking: Expr[ParameterMasking[B]]): Tree = {
-    val SensitiveBuilder               = weakTypeOf[SensitiveBuilder[A]].dealias
-    val SensitiveBuilderTransformation = weakTypeOf[SensitiveBuilderTransformation[B]].dealias
-    val A                              = weakTypeOf[A].dealias
-    val B                              = weakTypeOf[B].dealias
+  def maskImpl[A: WeakTypeTag, B: WeakTypeTag](f: Expr[A => B])(masking: Expr[ParameterMasking[B]]): Tree = {
+    val SensitiveBuilder = weakTypeOf[SensitiveBuilder[A]].dealias
 
     libraryUsageValidityCheck[A]()
 
-    val transformations = getTransformations[A](c.prefix.tree)
-
-    val copyValue = freshTermName("copyValue")
-    val maskValue = freshTermName("maskValue")
+    val (valNames, transformations) = getTransformationsTree[A]
 
     val (fieldName, transform) = extractSelectorField(f.tree)
-      .map { field =>
-        val transform =
-          q"""
-            SensitiveBuilderTransformation(
-              transformField = ($copyValue: $B) => $masking($copyValue),
-              maskField = ($maskValue: $B) => $masking($maskValue).toString
-            ).asInstanceOf[SensitiveBuilderTransformation[Any]]"""
-
-        field.toString -> transform
-      }
+      .map(field => field.toString -> masking)
       .getOrElse(
         error(s"Expected a field selector to be passed (as instance.field1), got $f")
       )
 
-    q"""new $SensitiveBuilder($transformations + ($fieldName -> $transform))""" //debugged "withFieldMasked"
+    q"""new $SensitiveBuilder($valNames + $fieldName, $transformations + ($fieldName -> $transform.asAny))"""
   }
 
-  private def getTransformations[A <: Product: WeakTypeTag](tree: Tree): Tree = {
+  private def getTransformationsWithValNames[A: WeakTypeTag]: (Set[String], Tree) = {
+    val (valNamesTree, tree) = getTransformationsTree[A]
+    val treeReset            = c.untypecheck(valNamesTree.duplicate)
+    val expr                 = c.Expr[Set[String]](treeReset)
+    c.eval(expr) -> tree
+  }
+
+  private def getTransformationsTree[A: WeakTypeTag]: (Tree, Tree) = {
     val SensitiveBuilder = weakTypeOf[SensitiveBuilder[A]].dealias
 
-    tree match {
-      case q"sensitive.`package`.sensitiveOf[$a]" =>
-        reify(Map.empty[String, SensitiveBuilderTransformation[Any]]).tree
-
-      case Typed(Apply(Select(New(tree), _), List(arg)), tpeTree)
+    c.prefix.tree match {
+      case Typed(Apply(Select(New(tree), _), List(valNames, arg)), tpeTree)
           if tpeTree.tpe =:= SensitiveBuilder && tree.tpe =:= SensitiveBuilder =>
-        arg
+        (valNames, arg) debugged "[DEBUG] [sensitive] Selected tree from SensitiveBuilder"
+
+      case _ =>
+        reify(Set.empty[String]).tree -> reify(Map.empty[String, BaseSensitive[Any]]).tree
     }
   }
 }

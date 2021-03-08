@@ -4,7 +4,6 @@ import ru.tinkoff.phobos.derivation.semiauto.deriveElementEncoder
 import ru.tinkoff.phobos.derivation.semiauto.deriveXmlEncoder
 import ru.tinkoff.phobos.encoding.ElementEncoder
 import ru.tinkoff.phobos.encoding.XmlEncoder
-import sensitive.phobos.SensitiveXmlEncoder
 
 object PhobosCodecs {
   private implicit val cardDataElementEncoder: ElementEncoder[CardData] = deriveElementEncoder[CardData]
@@ -40,7 +39,6 @@ object ExamplesPhobos extends App {
 
 //  NOTE: a workaround is to explicitly define a concrete implicit in the lexical scope.
 //  It will have precedence over the default one.
-//  Uncomment to see that it works
   import PhobosSensitiveCodecs._
   println(XmlEncoder[Person].encode(person))
 

@@ -8,23 +8,23 @@ package object sensitive {
 
   type AsMaskedString[A] = String with AsMaskedStringTag[A]
 
-  private[sensitive] def Masked[A](value: A): Masked[A] =
+  @internalApi def Masked[A](value: A): Masked[A] =
     value.asInstanceOf[Masked[A]]
 
-  private[sensitive] def AsMaskedString[A](value: String): AsMaskedString[A] =
+  @internalApi def AsMaskedString[A](value: String): AsMaskedString[A] =
     value.asInstanceOf[AsMaskedString[A]]
 
   @`inline` final def sensitiveOf[A <: Product]: SensitiveBuilder[A] =
-    SensitiveBuilder[A](Map.empty)
+    new SensitiveBuilder[A](Set.empty, Map.empty)
 
   @`inline` final implicit def Sensitive[A](self: A): SensitiveOps[A] =
     new SensitiveOps[A](self)
 
   def substitute[A](by: A): ParameterMasking[A] =
-    ParameterMasking.substitute(by)
+    new ParameterMasking.Substitute(by)
 
   def regexp(pattern: Regex, replacement: RegexReplacement): ParameterMasking[String] =
-    ParameterMasking.regexp(pattern, replacement)
+    new ParameterMasking.Regexp(pattern, replacement)
 
   def replaceAll(by: String): RegexReplacement = new RegexReplacement.All(by)
 

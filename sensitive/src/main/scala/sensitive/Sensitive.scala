@@ -3,10 +3,14 @@ package sensitive
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("${A} is not sensitive")
-trait Sensitive[A] {
+trait Sensitive[A] extends BaseSensitive[A] {
   def masked(value: A): Masked[A]
 
-  def asMaskedString(value: A): AsMaskedString[A] = ???
+  def asMaskedString(value: A): AsMaskedString[A]
+
+  override def maskBase(value: A): A = masked(value)
+
+  override def maskedStringBase(value: A): String = asMaskedString(value)
 }
 
 class SensitiveOps[A](private val self: A) extends AnyVal {

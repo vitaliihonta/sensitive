@@ -9,10 +9,8 @@ import sensitive.derivation.Derived
 
 class SensitiveElementEncoder[A: Sensitive](implicit ev: Derived[ElementEncoder[A]]) extends ElementEncoder[A] {
 
-  private val impl = ev.value.contramap[A](_.masked)
-
   override def encodeAsElement(a: A, sw: PhobosStreamWriter, localName: String, namespaceUri: Option[String]): Unit =
-    impl.encodeAsElement(a, sw, localName, namespaceUri)
+    ev.value.encodeAsElement(a.masked, sw, localName, namespaceUri)
 }
 
 class SensitiveAttributeEncoder[A: Sensitive](implicit ev: Derived[AttributeEncoder[A]]) extends AttributeEncoder[A] {
@@ -20,7 +18,7 @@ class SensitiveAttributeEncoder[A: Sensitive](implicit ev: Derived[AttributeEnco
   private val impl = ev.value.contramap[A](_.masked)
 
   override def encodeAsAttribute(a: A, sw: PhobosStreamWriter, localName: String, namespaceUri: Option[String]): Unit =
-    impl.encodeAsAttribute(a, sw, localName, namespaceUri)
+    ev.value.encodeAsAttribute(a.masked, sw, localName, namespaceUri)
 }
 
 class SensitiveXmlEncoder[A: Sensitive](implicit ev: Derived[XmlEncoder[A]]) extends XmlEncoder[A] {
