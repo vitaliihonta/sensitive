@@ -9,10 +9,6 @@ object Dependencies {
     val generic = "io.circe" %% "circe-generic" % circeVersion
   }
 
-  object Phobos {
-    val core = "ru.tinkoff" %% "phobos-core" % "0.9.2"
-  }
-
   object Logstage {
     private val izumiVersion = "1.0.3"
 

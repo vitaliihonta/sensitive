@@ -33,8 +33,7 @@ lazy val examples =
       Seq(
         Circe.generic,
         Logstage.core,
-        Logstage.renderingCirce,
-        Phobos.core
+        Logstage.renderingCirce
       )
     })
     .jvmPlatform(scalaVersions = List(scala212, scala213))
@@ -48,7 +47,6 @@ lazy val sensitive =
         "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
         Circe.core       % Optional,
         Logstage.core    % Optional,
-        Phobos.core      % Optional,
         Testing.scalatest
       )
     )
