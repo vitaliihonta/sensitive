@@ -42,27 +42,25 @@ class MaskingMacros(override val c: blackbox.Context) extends MacroUtils(c) {
     val sc              = freshTermName("sc")
 
     val transform = {
-      val copies = caseAccessorsWithNames.flatMap {
-        case (field, valName) =>
-          val name = field.name.toString
-          val tpe  = field.returnType.dealias
-          if (transformationsValNames contains name)
-            Some(q"$field = $transformations($name).maskBase($value.$field).asInstanceOf[$tpe]")
-          else None
+      val copies = caseAccessorsWithNames.flatMap { case (field, valName) =>
+        val name = field.name.toString
+        val tpe  = field.returnType.dealias
+        if (transformationsValNames contains name)
+          Some(q"$field = $transformations($name).maskBase($value.$field).asInstanceOf[$tpe]")
+        else None
       }
       q""" $value.copy(..$copies) """
     }
 
     val maskString = {
-      val maskTransformations = caseAccessorsWithNames.zipWithIndex.map {
-        case ((field, valName), idx) =>
-          val name = field.name.toString
-          val shown =
-            if (transformationsValNames contains name) q"$transformations($name).maskedStringBase($value.$field)"
-            else q"$value.$field.toString"
+      val maskTransformations = caseAccessorsWithNames.zipWithIndex.map { case ((field, valName), idx) =>
+        val name = field.name.toString
+        val shown =
+          if (transformationsValNames contains name) q"$transformations($name).maskedStringBase($value.$field)"
+          else q"$value.$field.toString"
 
-          val base = q"$sc.append($shown)"
-          if (idx == 0) base else q"""$sc.append(','); $base"""
+        val base = q"$sc.append($shown)"
+        if (idx == 0) base else q"""$sc.append(','); $base"""
       }
       q"""
           val $sc = new StringBuilder

@@ -21,7 +21,7 @@ class BaseSpec extends AnyWordSpecLike with Matchers {
     }
 
     "build instance with sensitive field correctly" in {
-      case class Card(number: String, cvv:      String)
+      case class Card(number: String, cvv: String)
       case class Person(name: String, password: String, card: Card)
 
       implicit val sensitiveCard: Sensitive[Card] =
@@ -54,7 +54,7 @@ class BaseSpec extends AnyWordSpecLike with Matchers {
     }
 
     "not take sensitive field into account when it's not provided explicitly" in {
-      case class Card(number: String, cvv:      String)
+      case class Card(number: String, cvv: String)
       case class Person(name: String, password: String, card: Card)
 
       implicit val sensitiveCard: Sensitive[Card] =

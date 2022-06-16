@@ -1,7 +1,32 @@
-# sensitive
-Case class fields masking
+[![sensitive Scala version support](https://index.scala-lang.org/vitaliihonta/sensitive/sensitive/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/vitaliihonta/sensitive/sensitive)
+![Build status](https://github.com/vitaliihonta/sensitive/actions/workflows/publish.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/vitaliihonta/sensitive/branch/main/graph/badge.svg?token=T8NBC4R360)](https://codecov.io/gh/vitaliihonta/sensitive)
+
+
+# Sensitive
+**Sensitive** is a library which allows you to mask sensitive data in **case class** fields.  
+It provides Typeclasses for masking and a concise DSL for building them (kinda similar to `chimney` library).  
+
+## Use cases
+
+- Masking sensitive data in class instances
+- Masking data in serializers (like JSON encoders)
+- Masking data in logs (using LogStage)
+
+## Install
+
+```sbt
+// Core
+libraryDependencies += "com.github.vitaliihonta" %% "sensitive" % "<VERSION>"
+```
+
+NOTE: dependencies on `circe` for JSON and `logtage` are optional!
+So adding **Sensitive** as a dependency doesn't bring them to your classpath  
+until you add them explicitly.
 
 ## Example
+
+For instance, you can define the following masking logic with **Sensitive**:
 
 ```scala
 import sensitive._
@@ -37,6 +62,39 @@ object Person {
 
 }
 ```
+
+Then you could use this **Sensitive** instance as follows:
+```scala
+val person = Person(
+    name = "John",
+    phone = "123-456-789",
+    card = CardData(
+      number = "4242-4242-4242-4242",
+      expMonth = 1,
+      expYear = 22,
+      cvv = "123"
+    )
+)
+
+person.asMaskedString
+```
+
+which will produce the following output:
+```
+Person(John,***,CardData(4242-42**-****-4242,1,22,***))
+```
+
+Additionally, you may extend `ToStringMasked` class, so that `.toString` will produce the String representation with masked fields: 
+
+```scala
+case class CardData(number: String, expMonth: Int, expYear: Int, cvv: String) 
+  // This will catch up the Sensitive instance
+  extends ToStringMasked[CardData]
+```
+
+More examples could be found in [the examples module](./examples)
+
+### Generated code
 
 Generated code for CardData:
 ```scala

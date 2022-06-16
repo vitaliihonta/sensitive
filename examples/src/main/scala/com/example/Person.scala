@@ -13,9 +13,8 @@ object CardData {
     .withFieldMasked(_.number)(
       regexp(
         "([0-9]{4})-([0-9]{4})-([0-9]{4})-([0-9]{4})".r,
-        replaceAll(replacer = {
-          case Regex.Groups(first, second, _, fourth) =>
-            s"$first-${second.take(2)}**-****-$fourth"
+        replaceAll(replacer = { case Regex.Groups(first, second, _, fourth) =>
+          s"$first-${second.take(2)}**-****-$fourth"
         })
       )
     )
