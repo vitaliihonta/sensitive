@@ -1,11 +1,13 @@
-[![sensitive Scala version support](https://index.scala-lang.org/vitaliihonta/sensitive/sensitive/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/vitaliihonta/sensitive/sensitive)
+[![sensitive Scala version support](https://index.scala-lang.org/vitaliihonta/sensitive/sensitive/latest-by-scala-version.svg)](https://index.scala-lang.org/vitaliihonta/sensitive/sensitive)
 ![Build status](https://github.com/vitaliihonta/sensitive/actions/workflows/publish.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/vitaliihonta/sensitive/branch/main/graph/badge.svg?token=T8NBC4R360)](https://codecov.io/gh/vitaliihonta/sensitive)
 
 
 # Sensitive
 **Sensitive** is a library which allows you to mask sensitive data in **case class** fields.  
-It provides Typeclasses for masking and a concise DSL for building them (kinda similar to `chimney` library).  
+It provides Typeclasses for masking and a concise DSL for building them.  
+
+Inpsired by [stringmask library](https://github.com/softwaremill/stringmask) and [chimney](https://scalalandio.github.io/chimney/)
 
 ## Use cases
 
